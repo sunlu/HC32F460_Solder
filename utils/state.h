@@ -12,8 +12,8 @@
 void state_init(void);
 void state_update(void);
 void state_emergency_check(void);
-void change_state(m_state_t new_state);
-const char *state_name(m_state_t state);
+void change_state(SOLDER_STATE_Def new_state);
+const char *state_name(SOLDER_STATE_Def state);
 
 extern float PID_setpoint;
 

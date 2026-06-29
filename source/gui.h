@@ -22,13 +22,12 @@
 #define C_DIVIDER     0x6B4D
 #define C_FRAME       0x8410
 #define C_CORNFLOWER  0x6499
-
-void gui_init(void);
+ 
 void gui_draw_main_screen(void);
 void gui_update_display(void);
 void gui_show_popup(const char *msg);
 void gui_show_startup_screen(void);
-void gui_draw_settings_menu(void);
-void gui_update_settings_menu(uint8_t selection, uint8_t level);
+//void gui_draw_settings_menu(void);
+//void gui_update_settings_menu(uint8_t selection, uint8_t level);
 
 #endif

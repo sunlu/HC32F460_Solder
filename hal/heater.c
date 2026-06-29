@@ -49,15 +49,12 @@ void heater_init(void) {
   // 4. 先配置 PWM 输出极性，保持引脚完全被定时器接管
   (void)TMRA_PWM_StructInit(&stcPwmInit);
   stcPwmInit.u32CompareValue = 0U;                   // 初始占空比为0
-  stcPwmInit.u16StartPolarity = TMRA_PWM_LOW;       // 计数开始输出高电平
+  stcPwmInit.u16StartPolarity = TMRA_PWM_LOW;       // 计数开始输出低电平
   stcPwmInit.u16StopPolarity = TMRA_PWM_LOW;         // 停止时强制输出低电平
-  stcPwmInit.u16CompareMatchPolarity = TMRA_PWM_HIGH; // 比较匹配时翻转为低电平
-  stcPwmInit.u16PeriodMatchPolarity = TMRA_PWM_LOW; // 周期结束时翻转为高电平
+  stcPwmInit.u16CompareMatchPolarity = TMRA_PWM_HIGH; // 比较匹配时翻转为高电平
+  stcPwmInit.u16PeriodMatchPolarity = TMRA_PWM_LOW; // 周期结束时翻转为低电平
   (void)TMRA_PWM_Init(HEATER_TIMER_UNIT, HEATER_TIMER_CH, &stcPwmInit);
-
-  // 5. 开启 PWM 输出使能（让定时器牢牢锁死引脚电平为 StopPolarity 即低电平）
-  TMRA_PWM_OutputCmd(HEATER_TIMER_UNIT, HEATER_TIMER_CH, ENABLE);
-
+ 
   // 6. 切换到定时器复用功能
   GPIO_SetFunc(HEATER_PWM_PORT, HEATER_PWM_PIN, GPIO_FUNC_4);
 
@@ -67,14 +64,14 @@ void heater_init(void) {
 
 void heater_on(void) {
   if (!s_bTimerStarted) {
-    // 始终保持 TMRA_PWM_OutputCmd 为 ENABLE 状态，绝对不要 DISABLE 它
+    TMRA_PWM_OutputCmd(HEATER_TIMER_UNIT, HEATER_TIMER_CH, ENABLE);
     TMRA_Start(HEATER_TIMER_UNIT);
     s_bTimerStarted = true;
   }
 }
 
-void heater_off(void) {
-  // 安全关闭法：不关闭输出门，仅停止计数，硬件会自动强制拉低引脚（因为 u16StopPolarity = TMRA_PWM_LOW）
+void heater_off(void) { 
+  TMRA_PWM_OutputCmd(HEATER_TIMER_UNIT, HEATER_TIMER_CH, ENABLE);
   TMRA_Stop(HEATER_TIMER_UNIT);
   TMRA_SetCountValue(HEATER_TIMER_UNIT, 0U); 
   // 同时将比较值清零，双重保险
@@ -90,9 +87,8 @@ void heater_set_duty(uint16_t duty) {
     return;
   }
   
-  // T12 软件限幅（数据手册建议或者根据供电限幅，防止大功率击穿）
   if (duty > 30) {
-    duty = 30;
+    duty = 30; //DEBUG:限制为30%
   }
  
   uint16_t compareValue = duty * 65;

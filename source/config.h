@@ -18,9 +18,10 @@ typedef enum {
   STATE_PRESTANDBY,      /* 预备待机状态（放入烙铁架后的延时阶段） */
   STATE_STANDBY,         /* 待机状态（降低至待机温度） */
   STATE_SLEEP,           /* 休眠状态（加热器完全关闭，烙铁头完全冷却） */
+  STATE_REPLACE,         /* 换芯状态（加热器完全关闭） */
   STATE_EMERGENCY_SLEEP, /* 紧急休眠状态（检测到故障时触发的保护关闭） */
   STATE_HALTED           /* 停机状态（用户手动停止加热） */
-} m_state_t;
+} SOLDER_STATE_Def;
 
 typedef enum {
   HANDLE_NONE = 0,
@@ -88,8 +89,8 @@ typedef struct {
 
   HANDLE_TYPE_Def handleType; /* 手柄连接状态: ADC>4090=断开, 否则=已连接 */
 
-  m_state_t current_state;  /* 系统当前所处的运行状态 */
-  m_state_t previous_state; /* 系统上一次所处的运行状态 */
+  SOLDER_STATE_Def current_state;  /* 系统当前所处的运行状态 */
+  SOLDER_STATE_Def previous_state; /* 系统上一次所处的运行状态 */
   float max_power_watt;     /* 当前系统允许的最大功率限制值 */
 } t_sensor_value;
 

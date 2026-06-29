@@ -196,7 +196,7 @@ static void pid_init(void) {
   PID_SetMode(&TPID, PID_MODE_AUTOMATIC);
   PID_SetSampleTime(&TPID, PID_UPDATE_INTERVAL_MS, 0);
   PID_SetOutputLimits(&TPID, 0, PID_MAX_OUTPUT);
-  PID_SetILimits(&TPID, -PID_MAX_I, PID_MAX_I); /* 对称积分限幅 */
+  //PID_SetILimits(&TPID, -PID_MAX_I, PID_MAX_I); /* 对称积分限幅 */
   PID_SetIminError(&TPID, PID_I_MIN_ERROR);
   PID_SetNegativeErrorIgainMult(&TPID, PID_NEG_ERROR_I_MULT, PID_NEG_ERROR_I_BIAS);
 }
@@ -232,7 +232,7 @@ static void handle_encoder_input(void) {
   /* Short press: toggle RUN/HALT */
   if (evt == ENC_SW_SHORT_PRESS) {
     if (sensor_val.current_state == STATE_RUN || sensor_val.current_state == STATE_PRESTANDBY ||
-        sensor_val.current_state == STATE_STANDBY) {
+        sensor_val.current_state == STATE_STANDBY || sensor_val.current_state == STATE_REPLACE) {
       change_state(STATE_HALTED);
     } else if (sensor_val.current_state == STATE_HALTED || sensor_val.current_state == STATE_SLEEP) {
       change_state(STATE_RUN);
@@ -304,8 +304,7 @@ int32_t main(void) {
 
   /* ---- Phase 4: Module init ---- */
   encoder_init();
-  pid_init();
-  gui_init();
+  pid_init(); 
 
   /* ---- Phase 5: Load config (defaults until Flash storage ready) ---- */
   memcpy(&config_val, &config_val_default, sizeof(t_config_value));
@@ -359,14 +358,15 @@ int32_t main(void) {
 
     /* ---- PID Heating Control (AxxSolder power formula) ---- */
     {
-      m_state_t st = sensor_val.current_state;
+      SOLDER_STATE_Def st = sensor_val.current_state;
       uint8_t is_heating = (st == STATE_RUN || st == STATE_PRESTANDBY || st == STATE_STANDBY);
 
       if (is_heating) {
 
         /* PID 无条件调用，内部管理 25ms 时序 */
         PID_Compute(&TPID);
-
+        //功率缩放常数 = 0.123  PID_MAX_OUTPUT=500 电源最大功率=120
+        //PWM占空比=需求功率*（电源最大功率*0.123) / 电源电压 / PID_MAX_OUTPUT
         uint16_t duty = (uint16_t)(sensor_val.power_req * (sensor_val.max_power_watt * 0.123 / sensor_val.voltage)) / 5;
 
         heater_set_duty(duty);
