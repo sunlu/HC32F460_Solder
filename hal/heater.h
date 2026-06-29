@@ -12,9 +12,9 @@
 #include "hc32_ll.h"
 
 void heater_init(void);
-void heater_set_duty(float duty_x10);  /* 0=关闭, HEATER_PWM_PERIOD=全开 */
+void heater_set_duty(uint16_t duty);  /* 0=关闭, HEATER_PWM_PERIOD=全开 */
 void heater_off(void);
-float heater_get_duty(void);
+uint8_t heater_get_duty(void);
 
 #endif /* SOURCE_HEATER_H */
 

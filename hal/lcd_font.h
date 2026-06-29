@@ -38,7 +38,8 @@ typedef struct {
 
 extern const CHSFont FontChinese24;
 extern const GFXfont DefaultFont;
-extern const GFXfont RobotoMono_Thin7pt7b;
+extern const GFXfont FreeSans6pt7b;
+extern const GFXfont FreeSansBold30pt7b;
 
 //#include "Fonts/GFXFF/FreeSansBold12pt7b.h"
 #endif

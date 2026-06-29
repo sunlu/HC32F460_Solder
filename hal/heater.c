@@ -13,15 +13,8 @@
 
 #define HEATER_TIMER_UNIT CM_TMRA_1
 #define HEATER_TIMER_CH TMRA_CH3
-
-// 定义PWM频率和精度相关的参数
-// 目标: 50kHz PWM, 总线时钟假设为 50MHz (请根据实际情况调整)
-#define PWM_FREQ_HZ                  (50000UL)            // 50kHz
-#define TIMER_CLOCK                 (50000000UL)          // 50MHz
-// 计算自动重载值: ARR = (TIMER_CLOCK / PWM_FREQ_HZ) - 1
-#define PWM_PERIOD                  ((TIMER_CLOCK / PWM_FREQ_HZ) - 1UL) // 999
-// 定义比较值寄存器最大范围 (0 ~ PWM_PERIOD+1) 
-#define PWM_CCR_MAX                 (TIMER_CLOCK / PWM_FREQ_HZ)    // 1000
+ 
+#define PWM_PERIOD 999 
 
 static uint16_t s_u16Compare = 0;
 static bool s_bTimerStarted = false;
@@ -89,16 +82,16 @@ void heater_off(void) {
   s_u16Compare = 0;
 }
 
-void heater_set_duty(float duty) {
-  if (duty <= 0.1f) {
+void heater_set_duty(uint16_t duty) {
+  if (duty <= 1) {
     heater_off();
     return;
   }
-  if (duty > 30.0f) {
-    duty = 30.0f;
+  if (duty > 30) {
+    duty = 30;
   }
   
-  uint16_t compareValue = (uint16_t)(duty * (float)PWM_CCR_MAX / 100.0f);
+  uint16_t compareValue = (uint16_t)(duty * 10);
 
   if (s_u16Compare == compareValue)
     return;
@@ -109,4 +102,4 @@ void heater_set_duty(float duty) {
   heater_on();
 }
 
-float heater_get_duty(void) { return (float)s_u16Compare/PWM_CCR_MAX; }
+uint8_t heater_get_duty(void) { return (uint8_t)(s_u16Compare * 100 /(PWM_PERIOD+1)); }

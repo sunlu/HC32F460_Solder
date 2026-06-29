@@ -30,7 +30,7 @@
 /* ========== 状态机阈值（单位：10ms） ========== */
 #define ENC_SW_DEBOUNCE_TIME 2 // 去抖 20ms
 #define ENC_SW_SHORT_TIME 5    // 最短有效按下 50ms
-#define ENC_SW_LONG_TIME 50    // 长按阈值 500ms
+#define ENC_SW_LONG_TIME 80    // 长按阈值 500ms
 
 /* ========== 状态机变量 ========== */
 typedef enum {

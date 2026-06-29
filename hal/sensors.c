@@ -3,11 +3,10 @@
  * @brief   Sensor processing - converts ADC raw values to physical quantities
  *
  * ADC reference: AVCC = +3.3V, 12-bit resolution (0-4095)
- * V_per_LSB = 3.3V / 4096 �� 0.8057mV
+ * V_per_LSB = 3.3V / 4096  0.8057mV
  */
 
 #include "sensors.h"
-
 
 #define SENSOR_PORT GPIO_PORT_A
 #define REPLACE_PIN GPIO_PIN_03
@@ -30,8 +29,6 @@ static t_average_def s_filterShake;
 
 static Hysteresis_FilterTypeDef s_hysteresisTemp;
 
-static float g_mcuTemp = 0;
-
 #define THERMOCOUPLE_GAIN 201.0f
 #define THERMOCOUPLE_MV_PER_C 0.040f
 
@@ -43,7 +40,7 @@ static float g_mcuTemp = 0;
 static float calc_temp(uint16_t adcVal) {
 
   if (adcVal > 4090)
-    return g_mcuTemp;
+    return sensor_val.mcu_temp;
 
   float v_adc = (float)adcVal * ADC_VREF / (float)ADC_RESOLUTION;
   float v_tc_mv = v_adc * 1000.0f / THERMOCOUPLE_GAIN;
@@ -51,7 +48,7 @@ static float calc_temp(uint16_t adcVal) {
 
   /* Simple cold-junction compensation: assume MCU temp �� room temp (25C)
    * In production, read MCU internal temp sensor for better accuracy */
-  temp_c += g_mcuTemp;
+  temp_c += sensor_val.mcu_temp;
 
   return temp_c;
 }
@@ -81,13 +78,10 @@ void sensor_gpio_init(void) {
   stcGpioInit.u16PullUp = PIN_PU_ON;
 
   stcGpioInit.u16PinState = PIN_STAT_SET; /* default high */
-  GPIO_Init(SENSOR_PORT, REPLACE_PIN | SLEEP_PIN | HANDLE_PIN | SHAKE_PIN,
-            &stcGpioInit);
+  GPIO_Init(SENSOR_PORT, REPLACE_PIN | SLEEP_PIN | HANDLE_PIN | SHAKE_PIN, &stcGpioInit);
 }
 
-uint8_t sensor_read_pin(uint16_t pin) {
-  return GPIO_ReadInputPins(SENSOR_PORT, pin);
-}
+uint8_t sensor_read_pin(uint16_t pin) { return GPIO_ReadInputPins(SENSOR_PORT, pin); }
 
 /* ========================================================================
  * sensors_init - Initialize filters and do initial ADC readings
@@ -96,8 +90,6 @@ void sensors_init(void) {
   mcu_init();
   adc_init();
   sensor_gpio_init();
-
-  g_mcuTemp = mcu_get_temp();
 
   average_init(&s_filterTemp, (uint32_t)2);
   average_init(&s_filterTempShow, (uint32_t)50);
@@ -118,14 +110,10 @@ void sensors_init(void) {
  * 高速任务：支架/手柄/功率/温度/按键/紧急检测/烙铁头
  * ======================================================================== */
 void sensors_read_hight(void) {
-  sensor_val.sleep =
-      average_compute(sensor_read_pin(SLEEP_PIN), &s_filterSleep);
-  sensor_val.replace =
-      average_compute(sensor_read_pin(REPLACE_PIN), &s_filterReplace);
-  sensor_val.handle =
-      average_compute(sensor_read_pin(HANDLE_PIN), &s_filterHandle);
-  sensor_val.shake =
-      average_compute(sensor_read_pin(SHAKE_PIN), &s_filterShake);
+  sensor_val.sleep = average_compute(sensor_read_pin(SLEEP_PIN), &s_filterSleep);
+  sensor_val.replace = average_compute(sensor_read_pin(REPLACE_PIN), &s_filterReplace);
+  sensor_val.handle = average_compute(sensor_read_pin(HANDLE_PIN), &s_filterHandle);
+  sensor_val.shake = average_compute(sensor_read_pin(SHAKE_PIN), &s_filterShake);
 
   if (s_adcVal.C > 4086)
     sensor_val.handleType = HANDLE_NONE;
@@ -153,10 +141,8 @@ void sensors_read_low(void) {
   sensor_val.mcu_temp = average_compute(sensor_val.mcu_temp, &s_filterMCU);
 
   //
-  sensor_val.temp_show =
-      average_compute(sensor_val.temp_avg, &s_filterTempShow);
-  sensor_val.temp_show =
-      hysteresis_add(sensor_val.temp_show, &s_hysteresisTemp);
+  sensor_val.temp_show = average_compute(sensor_val.temp_avg, &s_filterTempShow);
+  sensor_val.temp_show = hysteresis_add(sensor_val.temp_show, &s_hysteresisTemp);
 }
 
 const char *handle_name(HANDLE_TYPE_Def handle) {

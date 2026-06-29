@@ -47,5 +47,7 @@ void lcd_draw_chinese(uint16_t x, uint16_t y, const char *text, uint16_t color, 
 void lcd_draw_string(uint16_t x, uint16_t y, const char *text, uint16_t color,uint16_t bgColor,const GFXfont *font );
 
 void lcd_draw_string_center(uint16_t y, const char *text,  uint16_t color, uint16_t bgColor,const GFXfont *font);
+void lcd_draw_string_right(uint16_t y, const char *text, uint16_t color, uint16_t bgColor, const GFXfont *font);
+  
 void lcd_draw_chinese_center(uint16_t y, const char *text, uint16_t color,uint16_t bgColor,const CHSFont *chFont,const  GFXfont *font); 
 #endif

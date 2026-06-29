@@ -36,7 +36,7 @@
 /* Sensor values (updated by sensors_read() each 10ms) */
 volatile t_sensor_value sensor_val = {.temp_target = DEFAULT_TEMP,
                                       .temp_show = 25.0f,
-                                      
+
                                       .temp_last = 25.0f,
                                       .temp_avg = 25.0f,
 
@@ -53,8 +53,7 @@ volatile t_sensor_value sensor_val = {.temp_target = DEFAULT_TEMP,
                                       .handleType = HANDLE_NONE,
                                       .current_state = STATE_SLEEP,
                                       .previous_state = STATE_SLEEP,
-                                      .max_power_watt = 70.0f
-};
+                                      .max_power_watt = 70.0f};
 
 /* Flash config (defaults used until storage_init() is ready) */
 t_config_value config_val;
@@ -107,7 +106,7 @@ uint32_t prev_ms_prestandby = 0;
  * PID Controller Instance
  * ============================================================================
  */
-static PID_TypeDef TPID; 
+static PID_TypeDef TPID;
 
 /* ============================================================================
  * Utility Functions
@@ -133,10 +132,8 @@ float clamp_float(float d, float min, float max) {
  *   PCLK2=50M, PCLK3=50M, PCLK4=100M
  */
 void bsp_clk_init(void) {
-  CLK_SetClockDiv(CLK_BUS_CLK_ALL,
-                  (CLK_HCLK_DIV1 | CLK_EXCLK_DIV2 | CLK_PCLK0_DIV1 |
-                   CLK_PCLK1_DIV2 | CLK_PCLK2_DIV4 | CLK_PCLK3_DIV4 |
-                   CLK_PCLK4_DIV2));
+  CLK_SetClockDiv(CLK_BUS_CLK_ALL, (CLK_HCLK_DIV1 | CLK_EXCLK_DIV2 | CLK_PCLK0_DIV1 | CLK_PCLK1_DIV2 | CLK_PCLK2_DIV4 |
+                                    CLK_PCLK3_DIV4 | CLK_PCLK4_DIV2));
 
   GPIO_AnalogCmd(GPIO_PORT_H, GPIO_PIN_00 | GPIO_PIN_01, ENABLE);
 
@@ -193,7 +190,7 @@ void SysTick_Handler(void) { SysTick_IncTick(); }
  */
 static void pid_init(void) {
   PID_Config(&TPID, (volatile float *)&sensor_val.temp_avg, /* 滤波后温度 */
-             &sensor_val.power_req, &PID_setpoint,                    /* 状态机管理 */
+             &sensor_val.power_req, &PID_setpoint,          /* 状态机管理 */
              PID_KP, PID_KI, PID_KD, PID_CD_DIRECT);
 
   PID_SetMode(&TPID, PID_MODE_AUTOMATIC);
@@ -201,8 +198,7 @@ static void pid_init(void) {
   PID_SetOutputLimits(&TPID, 0, PID_MAX_OUTPUT);
   PID_SetILimits(&TPID, -PID_MAX_I, PID_MAX_I); /* 对称积分限幅 */
   PID_SetIminError(&TPID, PID_I_MIN_ERROR);
-  PID_SetNegativeErrorIgainMult(&TPID, PID_NEG_ERROR_I_MULT,
-                                PID_NEG_ERROR_I_BIAS);
+  PID_SetNegativeErrorIgainMult(&TPID, PID_NEG_ERROR_I_MULT, PID_NEG_ERROR_I_BIAS);
 }
 
 /* ============================================================================
@@ -235,12 +231,10 @@ static void handle_encoder_input(void) {
 
   /* Short press: toggle RUN/HALT */
   if (evt == ENC_SW_SHORT_PRESS) {
-    if (sensor_val.current_state == STATE_RUN ||
-        sensor_val.current_state == STATE_PRESTANDBY ||
+    if (sensor_val.current_state == STATE_RUN || sensor_val.current_state == STATE_PRESTANDBY ||
         sensor_val.current_state == STATE_STANDBY) {
       change_state(STATE_HALTED);
-    } else if (sensor_val.current_state == STATE_HALTED ||
-               sensor_val.current_state == STATE_SLEEP) {
+    } else if (sensor_val.current_state == STATE_HALTED || sensor_val.current_state == STATE_SLEEP) {
       change_state(STATE_RUN);
     }
   }
@@ -262,8 +256,7 @@ static uint8_t s_beeped_at_temp = 0;
 static void handle_temp_reached_beep(void) {
   float error = sensor_val.temp_target - sensor_val.temp_avg;
 
-  if (sensor_val.current_state == STATE_RUN &&
-      config_val.beep_at_set_temp > 0.5f) {
+  if (sensor_val.current_state == STATE_RUN && config_val.beep_at_set_temp > 0.5f) {
     if (error < 5.0f && error > -5.0f && !s_beeped_at_temp) {
       buzzer_trigger(BUZZ_DOUBLE);
       s_beeped_at_temp = 1;
@@ -340,22 +333,25 @@ int32_t main(void) {
    *   Every 10 ticks (100ms): beep check, popup timeout
    * ======================================================================== */
 
-  for (uint8_t i = 0; i < 100; i++) {
+  for (uint8_t i = 0; i < 200; i++) {
     sensors_read_hight();
     sensors_read_low();
   }
 
   uint32_t tick = 0;
 
+  sensor_val.max_power_watt = 60;
+
   for (;;) {
+
     DDL_DelayMS(10); /* base tick = 10ms */
     tick++;
-    g_system_tick = tick; 
+    g_system_tick = tick;
     sensors_read_hight();
 
     if ((tick % 10) == 0) {
       sensors_read_low();
-    } 
+    }
 
     state_update();          /* state machine (stand/sleep logic) */
     state_emergency_check(); /* fault detection (overtemp/undervolt) */
@@ -364,19 +360,18 @@ int32_t main(void) {
     /* ---- PID Heating Control (AxxSolder power formula) ---- */
     {
       m_state_t st = sensor_val.current_state;
-      uint8_t is_heating =
-          (st == STATE_RUN || st == STATE_PRESTANDBY || st == STATE_STANDBY);
+      uint8_t is_heating = (st == STATE_RUN || st == STATE_PRESTANDBY || st == STATE_STANDBY);
 
-      if (is_heating) { 
+      if (is_heating) {
 
         /* PID 无条件调用，内部管理 25ms 时序 */
         PID_Compute(&TPID);
-        
-      float duty =  sensor_val.power_req * sensor_val.max_power_watt * 0.123 / sensor_val.voltage / PID_MAX_OUTPUT;
 
-         heater_set_duty(duty);
+        uint16_t duty = (uint16_t)(sensor_val.power_req * (sensor_val.max_power_watt * 0.123 / sensor_val.voltage)) / 5;
+
+        heater_set_duty(duty);
       } else {
-        heater_off(); 
+        heater_off();
       }
     }
 

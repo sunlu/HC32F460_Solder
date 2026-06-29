@@ -5,7 +5,7 @@
  * 本PID实现基于 Brett Beauregard 的 Arduino PID 库 v1.2.1，
  * 主要改进：
  *
- * 1. 时序安全：使用 millis()获取实际时间，以seconds为单位计算
+ * 1. 时序安全：使用HAL_GetTick()获取实际时间，以seconds为单位计算
  *    Ki和Kd，使增益值与采样时间无关。
  *
  * 2. 非对称I增益：对于负误差（温度过冲时），使用更小的I增益
@@ -22,7 +22,7 @@
  * 5. 比例项基于误差（P on Error）：采用标准的比例-误差模式。
  */
 #include "pid.h"
-#include "config.h"
+
 /**
  * @brief 初始化PID控制器内部状态
  * 设置积分累加器为当前输出值（clamp到输出限幅内），
@@ -46,7 +46,15 @@ void PID_Init(PID_TypeDef *uPID)
  * @param Kp, Ki, Kd        增益参数
  * @param ControllerDirection 控制方向
  */
-void PID_Config(PID_TypeDef *uPID, volatile float *Input, volatile float *Output, volatile float *Setpoint, float Kp, float Ki, float Kd, PIDCD_TypeDef ControllerDirection)
+void PID_Config(PID_TypeDef *uPID,
+		volatile float *Input,
+		volatile float *Output,
+		volatile float *Setpoint,
+		float Kp,
+		float Ki,
+		float Kd,
+		PIDCD_TypeDef ControllerDirection
+		)
 {
     uPID->MyOutput   = Output;
     uPID->MyInput    = Input;
@@ -59,7 +67,7 @@ void PID_Config(PID_TypeDef *uPID, volatile float *Input, volatile float *Output
     PID_SetControllerDirection(uPID, ControllerDirection);
     PID_SetTunings(uPID, Kp, Ki, Kd);
 
-    uPID->LastTime = millis() - uPID->SampleTime;  /* 确保第一次调用立即计算 */
+    uPID->LastTime = SysTick_GetTick() - uPID->SampleTime;  // 确保第一次调用立即计算
 }
 
 /**
@@ -112,7 +120,7 @@ uint8_t PID_Compute(PID_TypeDef *uPID){
     }
 
     /* 计算距离上次执行的时间差 */
-    now        =  millis();
+    now        = SysTick_GetTick();
     timeChange = (now - uPID->LastTime);
 
     if ((timeChange >= uPID->SampleTime) || (uPID->updateOnEveryCall))
