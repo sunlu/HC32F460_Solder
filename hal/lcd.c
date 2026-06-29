@@ -470,7 +470,7 @@ void lcd_draw_ch_char(uint16_t x, uint16_t y, const uint8_t *utf8_code, uint16_t
  * @brief  在指定坐标绘制中英文混合字符串
  * @param  font : 传入你在之前实现的英文 GFXfont，汉字库直接内部硬编码绑定或按需扩展
  */
-void lcd_draw_chinese(uint16_t x, uint16_t y, const unsigned char  *text, uint16_t color, uint16_t bgColor,const CHSFont *chFont,const GFXfont *font) {
+void lcd_draw_chinese(uint16_t x, uint16_t y, const char  *text, uint16_t color, uint16_t bgColor,const CHSFont *chFont,const GFXfont *font) {
     if (text == NULL || font == NULL) return;
 
     uint16_t cur_x = x;
@@ -623,7 +623,7 @@ uint8_t lcd_draw_char(uint16_t x, uint16_t y, const char c, uint16_t color, uint
  * @param  bgColor: 背景颜色
  * @param  font   : 字体库指针
  */
-void lcd_draw_string(uint16_t x, uint16_t y, const unsigned char* text, uint16_t color, uint16_t bgColor,const GFXfont *font) {
+void lcd_draw_string(uint16_t x, uint16_t y, const char* text, uint16_t color, uint16_t bgColor,const GFXfont *font) {
     if (text == NULL || font == NULL) return;
 
     uint16_t cur_x = x;
@@ -667,11 +667,11 @@ void lcd_draw_string(uint16_t x, uint16_t y, const unsigned char* text, uint16_t
  * @param  bgColor: 背景颜色
  * @param  font   : 字体库指针
  */
-void lcd_draw_string_center(uint16_t y, const unsigned char *text, uint16_t color, uint16_t bgColor,const GFXfont *font) {
+void lcd_draw_string_center(uint16_t y, const char *text, uint16_t color, uint16_t bgColor,const GFXfont *font) {
     if (text == NULL || font == NULL) return;
 
     uint32_t total_width = 0;
-    const unsigned char *p = text;
+    const char *p = text;
 
     // 1. 预先计算整个字符串的总像素宽度
     while (*p != '\0') {

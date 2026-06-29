@@ -8,7 +8,7 @@
 void hysteresis_init(Hysteresis_FilterTypeDef* hysteresis_struct, float hysteresis)
 {
     hysteresis_struct->hysteresis = hysteresis;
-    hysteresis_struct->previous_value = NAN;  // 用NaN标记未初始化状态
+    hysteresis_struct->previous_value = -1.0f;  // 用NaN标记未初始化状态
 }
 
 /**
@@ -23,7 +23,7 @@ void hysteresis_init(Hysteresis_FilterTypeDef* hysteresis_struct, float hysteres
  * 3. 否则保持上次输出不变
  */
 float hysteresis_add(float new_value, Hysteresis_FilterTypeDef* hysteresis_struct) {
-    if (isnan(hysteresis_struct->previous_value)) {
+    if (hysteresis_struct->previous_value < 0) {
         hysteresis_struct->previous_value = new_value;
         return new_value;
     }

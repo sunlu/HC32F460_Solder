@@ -43,9 +43,9 @@ uint8_t lcd_draw_char(uint16_t x, uint16_t y, const char c, uint16_t color, uint
 void lcd_draw_ch_char(uint16_t x, uint16_t y, const uint8_t *utf8_code, uint16_t color, uint16_t bgColor, const CHSFont *font);
 
 
-void lcd_draw_chinese(uint16_t x, uint16_t y, const unsigned char *text, uint16_t color, uint16_t bgColor,const CHSFont *chFont,const GFXfont *font);
-void lcd_draw_string(uint16_t x, uint16_t y, const unsigned char *text, uint16_t color,uint16_t bgColor,const GFXfont *font );
+void lcd_draw_chinese(uint16_t x, uint16_t y, const char *text, uint16_t color, uint16_t bgColor,const CHSFont *chFont,const GFXfont *font);
+void lcd_draw_string(uint16_t x, uint16_t y, const char *text, uint16_t color,uint16_t bgColor,const GFXfont *font );
 
-void lcd_draw_string_center(uint16_t y, const unsigned char *text,  uint16_t color, uint16_t bgColor,const GFXfont *font);
-void lcd_draw_chinese_center(uint16_t y, const unsigned char *text, uint16_t color,uint16_t bgColor,const CHSFont *chFont,const  GFXfont *font); 
+void lcd_draw_string_center(uint16_t y, const char *text,  uint16_t color, uint16_t bgColor,const GFXfont *font);
+void lcd_draw_chinese_center(uint16_t y, const char *text, uint16_t color,uint16_t bgColor,const CHSFont *chFont,const  GFXfont *font); 
 #endif

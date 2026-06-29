@@ -301,7 +301,7 @@ int32_t fputc(int32_t ch, FILE *f)
 #elif (defined (__ICCARM__) && (__VER__ >= 9000000))
 #include <LowLevelIOInterface.h>
 #pragma module_name = "?__write"
-size_t __dwrite(int handle, const unsigned char *buffer, size_t size)
+size_t __dwrite(int handle, const char *buffer, size_t size)
 {
     size_t nChars = 0;
     size_t i;

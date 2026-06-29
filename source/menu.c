@@ -26,7 +26,7 @@ typedef enum {
   GRP_COUNT
 } MenuGroup;
 
-static const unsigned char *s_group_names[] = {"行为设置", "预设温度", "显示设置",
+static const char *s_group_names[] = {"行为设置", "预设温度", "显示设置",
                                       "声音设置", "系统设置"};
 
 #define MODE_ITEMS 11
@@ -35,14 +35,14 @@ static const unsigned char *s_group_names[] = {"行为设置", "预设温度", "
 #define SOUND_ITEMS 4
 #define SYSTEM_ITEMS 3
 
-static const unsigned char *s_mode_names[] = {
+static const char *s_mode_names[] = {
     "开机温度",      "温度偏移",    "待机温度", "待机时间(min)",
     "急停时间(min)", "开机蜂鸣",    "到达蜂鸣", "编码器反向",
     "休眠时间(min)", "待机延时(s)", "Boost温度"};
-static const unsigned char *s_preset_names[] = {"预设1", "预设2"};
-static const unsigned char *s_display_names[] = {"屏幕旋转", "温度单位", "功率单位",
+static const char *s_preset_names[] = {"预设1", "预设2"};
+static const char *s_display_names[] = {"屏幕旋转", "温度单位", "功率单位",
                                         "显示曲线"};
-static const unsigned char *s_sound_names[] = {"蜂鸣使能", "开机蜂鸣", "到达蜂鸣",
+static const char *s_sound_names[] = {"蜂鸣使能", "开机蜂鸣", "到达蜂鸣",
                                       "蜂鸣音调"};
 
 typedef struct {
@@ -81,7 +81,7 @@ static const ParamDef s_sound_params[SOUND_ITEMS] = {
     {&config_val.beep_tone, 0, 3, 1, 1},
 };
 
-static const unsigned char *get_name(MenuGroup g, uint8_t i) {
+static const char *get_name(MenuGroup g, uint8_t i) {
   switch (g) {
   case GRP_MODE:
     return (i < MODE_ITEMS) ? s_mode_names[i] : "?";
@@ -131,7 +131,7 @@ void menu_enter(void) {
   uint8_t level = 0, cursor = 0, editing = 0;
   float edit_val = 0.0f;
   const ParamDef *pdef = NULL;
-  unsigned char buf[48];
+  char buf[48];
 
   float saved_setpoint = PID_setpoint;
   PID_setpoint = 0.0f;
@@ -220,7 +220,7 @@ void menu_enter(void) {
         lcd_draw_chinese(12,y,(char*)s_group_names[i],fg,bg,&FontChinese24,&DefaultFont); y+=lh+4;
       }
     } else if (editing) {
-      const unsigned char *n = get_name(grp, cursor);
+      const char *n = get_name(grp, cursor);
       snprintf(buf, sizeof(buf), "%s", n);
       lcd_draw_chinese(0,y,buf,C_WHITE,C_BLACK,&FontChinese24,&DefaultFont); y+=40;
       snprintf(buf, sizeof(buf), pdef && pdef->is_int ? "%3.0f" : "%.1f",
@@ -233,7 +233,7 @@ void menu_enter(void) {
         uint16_t bg = (i == cursor) ? C_TITLE_BG : C_BLACK,
                  fg = (i == cursor) ? C_WHITE : C_GRAY;
         lcd_fill_rect(4, y - 2, TFT_WIDTH - 8, lh, bg);
-        const unsigned char *n = get_name(grp, i);
+        const char *n = get_name(grp, i);
         const ParamDef *pd = get_def(grp, i);
         if (pd && pd->ptr) {
           snprintf(buf, sizeof(buf), pd->is_int ? "%s:%3.0f" : "%s:%.1f", n,
