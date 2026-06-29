@@ -259,12 +259,13 @@ void state_emergency_check(void) {
   }
 
   /* TC fault: heating but temp < 50C and setpoint > 100C
-   * Possible causes: no tip, broken TC wire, amp failure */
+   * Possible causes: no tip, broken TC wire, amp failure
+   * 5s debounce needed — cold tip takes 3-5s to heat from 25C to 50C */
   static uint8_t s_tc_fault_cnt = 0;
   if (sensor_val.current_state == STATE_RUN && sensor_val.current > 0.5f && sensor_val.temp_avg < 50.0f &&
       PID_setpoint > 100.0f) {
     s_tc_fault_cnt++;
-    if (s_tc_fault_cnt > 50) { /* 500ms debounce */
+    if (s_tc_fault_cnt > 500) { /* 5s debounce */
       change_state(STATE_EMERGENCY_SLEEP);
       s_tc_fault_cnt = 0;
     }
