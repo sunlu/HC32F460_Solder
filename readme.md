@@ -8,5 +8,5 @@
     https://www.xhsc.com.cn/product/1246.html
 
 # 运行截图
-    ![运行1](docs/image1.jpg)
-    ![运行2](docs/image2.jpg)
+![运行1](docs/image1.jpg)
+![运行2](docs/image2.jpg)
