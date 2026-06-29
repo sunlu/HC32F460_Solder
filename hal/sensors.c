@@ -69,7 +69,7 @@ static float calc_current(uint16_t adcVal) {
 }
 
 /* Last ADC readings */
-static t_adc_val s_adcVal; /* non-static for debug display */
+ t_adc_val s_adcVal; /* non-static for debug display */
 
 void sensor_gpio_init(void) {
   stc_gpio_init_t stcGpioInit;
@@ -115,11 +115,6 @@ void sensors_read_hight(void) {
   sensor_val.handle = average_compute(sensor_read_pin(HANDLE_PIN), &s_filterHandle);
   sensor_val.shake = average_compute(sensor_read_pin(SHAKE_PIN), &s_filterShake);
 
-  if (s_adcVal.C > 4086)
-    sensor_val.handleType = HANDLE_NONE;
-  else
-    sensor_val.handleType = HANDLE_245;
-
   // sensor_val.handle = (s_adcVal.C <= 4090);
 }
 
@@ -127,6 +122,11 @@ void sensors_read_hight(void) {
 void sensors_read_low(void) {
 
   adc_read_all(&s_adcVal);
+  
+  if (s_adcVal.C > 4086)
+    sensor_val.handleType = HANDLE_NONE;
+  else
+    sensor_val.handleType = HANDLE_245;
 
   sensor_val.temp_last = sensor_val.temp_avg;
   sensor_val.current = calc_current(s_adcVal.A);

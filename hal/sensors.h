@@ -17,6 +17,7 @@
 #include "config.h"
 #include "hysteresis.h"
 
+extern t_adc_val s_adcVal;
 
 void sensors_init(void);
 

@@ -145,10 +145,10 @@ void gui_update_display(void) {
 
   /* Debug */
   lcd_fill_rect(0, DBG_Y, SCR_W, 30, C_BLACK);
-  snprintf(buf, sizeof(buf), "P:%3.0f D:%2d%% I:%2.1f T:%3.0f/%3.0f SW:%0.1f / %0.1f",
+  snprintf(buf, sizeof(buf), "P:%3.0f D:%2d%% I:%2.1f T:%3.0f/%3.0f SW:%0.1f/%0.1f C%4d",
     sensor_val.power_req, duty, sensor_val.current,
            sensor_val.temp_avg, PID_setpoint,
-  sensor_val.sleep, sensor_val.replace
+  sensor_val.sleep, sensor_val.replace, s_adcVal.C
   );
 
   lcd_draw_string(4, DBG_Y, buf, C_GRAY, C_BLACK, &FreeSans6pt7b);

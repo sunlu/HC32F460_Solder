@@ -6,3 +6,7 @@
 
 ## HC32F460 相关文档
     https://www.xhsc.com.cn/product/1246.html
+
+# 运行截图
+    ![运行1](docs/image1.jpg)
+    ![运行2](docs/image2.jpg)

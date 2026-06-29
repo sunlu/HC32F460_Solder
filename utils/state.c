@@ -69,11 +69,11 @@ void change_state(SOLDER_STATE_Def new_state) {
     heater_off();
     break;
 
-  case STATE_EMERGENCY_SLEEP:
-    PID_setpoint = 0.0f;
-    heater_off();
-    buzzer_trigger(BUZZ_DOUBLE);
-    break;
+//  case STATE_EMERGENCY_SLEEP:
+//    PID_setpoint = 0.0f;
+//    heater_off();
+//    buzzer_trigger(BUZZ_DOUBLE);
+//    break;
 
   case STATE_HALTED:
     PID_setpoint = 0.0f;
@@ -116,14 +116,14 @@ void state_update(void) {
   case STATE_RUN:
     if (!hasHandle) {
       // 检测不到手柄
-      change_state(STATE_EMERGENCY_SLEEP);
-      break;
+      //change_state(STATE_EMERGENCY_SLEEP);
+      //break;
     }
 
     if (replcing) {
       // 换加热芯中
-      change_state(STATE_REPLACE);
-      break;
+      //change_state(STATE_REPLACE);
+      //break;
     } 
 
     /* Handle in stand -> pre-standby or immediate standby */
@@ -136,12 +136,12 @@ void state_update(void) {
     }
 
     /* Continuous heating timeout protection */
-    if (config_val.emergency_time > 0.5f) {
-      uint32_t elapsed = millis() - s_run_start_ms;
-      if (elapsed >= (uint32_t)(config_val.emergency_time * 60000.0f)) {
-        change_state(STATE_EMERGENCY_SLEEP);
-      }
-    }
+//    if (config_val.emergency_time > 0.5f) {
+//      uint32_t elapsed = millis() - s_run_start_ms;
+//      if (elapsed >= (uint32_t)(config_val.emergency_time * 60000.0f)) {
+//        change_state(STATE_EMERGENCY_SLEEP);
+//      }
+//    }
     break;
 
   case STATE_PRESTANDBY:
@@ -151,10 +151,10 @@ void state_update(void) {
       break;
     }
     /* Handle missing -> emergency */
-    if (!hasHandle) {
-      change_state(STATE_EMERGENCY_SLEEP);
-      break;
-    }
+//    if (!hasHandle) {
+//      change_state(STATE_EMERGENCY_SLEEP);
+//      break;
+//    }
     /* Delay elapsed -> enter standby */
     if (millis() - s_prestandby_start_ms >= (uint32_t)(config_val.standby_delay_s * 1000.0f)) {
       change_state(STATE_STANDBY);
@@ -168,10 +168,10 @@ void state_update(void) {
       break;
     }
     /* Handle missing -> emergency */
-    if (!hasHandle) {
-      change_state(STATE_EMERGENCY_SLEEP);
-      break;
-    }
+//    if (!hasHandle) {
+//      change_state(STATE_EMERGENCY_SLEEP);
+//      break;
+//    }
     /* Setpoint = min(user target, standby temp) */
     if (config_val.standby_temp > sensor_val.temp_target) {
       PID_setpoint = sensor_val.temp_target;
@@ -188,10 +188,10 @@ void state_update(void) {
 
   case STATE_REPLACE:
     /* 换加热芯: Handle missing -> emergency */
-    if (!hasHandle) {
-      change_state(STATE_EMERGENCY_SLEEP);
-      break;
-    }
+//    if (!hasHandle) {
+//      change_state(STATE_EMERGENCY_SLEEP);
+//      break;
+//    }
     /* 换芯完成: replcing pin 恢复高电平 -> 根据烙铁架状态决定去向 */
     if (!replcing) {
       if (inSleep) {
@@ -211,11 +211,11 @@ void state_update(void) {
     }
     break;
 
-  case STATE_EMERGENCY_SLEEP:
-    /* Only recoverable via power cycle */
-    PID_setpoint = 0.0f;
-    heater_off();
-    break;
+//  case STATE_EMERGENCY_SLEEP:
+//    /* Only recoverable via power cycle */
+//    PID_setpoint = 0.0f;
+//    heater_off();
+//    break;
 
   case STATE_HALTED:
     /* Heater off, resume via encoder short press */
@@ -247,31 +247,31 @@ void state_emergency_check(void) {
   }
 
   /* Overtemp */
-  if (sensor_val.temp_avg > EMERGENCY_SHUTDOWN_TEMP) {
-    change_state(STATE_EMERGENCY_SLEEP);
-    return;
-  }
+//  if (sensor_val.temp_avg > EMERGENCY_SHUTDOWN_TEMP) {
+//    change_state(STATE_EMERGENCY_SLEEP);
+//    return;
+//  }
 
-  /* Undervoltage */
-  if (sensor_val.voltage < MIN_BUS_VOLTAGE && sensor_val.current_state == STATE_RUN) {
-    change_state(STATE_EMERGENCY_SLEEP);
-    return;
-  }
+//  /* Undervoltage */
+//  if (sensor_val.voltage < MIN_BUS_VOLTAGE && sensor_val.current_state == STATE_RUN) {
+//    change_state(STATE_EMERGENCY_SLEEP);
+//    return;
+//  }
 
   /* TC fault: heating but temp < 50C and setpoint > 100C
    * Possible causes: no tip, broken TC wire, amp failure
    * 5s debounce needed — cold tip takes 3-5s to heat from 25C to 50C */
-  static uint8_t s_tc_fault_cnt = 0;
-  if (sensor_val.current_state == STATE_RUN && sensor_val.current > 0.5f && sensor_val.temp_avg < 50.0f &&
-      PID_setpoint > 100.0f) {
-    s_tc_fault_cnt++;
-    if (s_tc_fault_cnt > 500) { /* 5s debounce */
-      change_state(STATE_EMERGENCY_SLEEP);
-      s_tc_fault_cnt = 0;
-    }
-  } else {
-    s_tc_fault_cnt = 0;
-  }
+//  static uint8_t s_tc_fault_cnt = 0;
+//  if (sensor_val.current_state == STATE_RUN && sensor_val.current > 0.5f && sensor_val.temp_avg < 50.0f &&
+//      PID_setpoint > 100.0f) {
+//    s_tc_fault_cnt++;
+//    if (s_tc_fault_cnt > 500) { /* 5s debounce */
+//      change_state(STATE_EMERGENCY_SLEEP);
+//      s_tc_fault_cnt = 0;
+//    }
+//  } else {
+//    s_tc_fault_cnt = 0;
+//  }
 }
 
 /* ========================================================================
