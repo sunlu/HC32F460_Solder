@@ -50,11 +50,12 @@ static void lcd_write_data8(uint8_t data);
 static void lcd_write_data16(uint16_t data);
 
 static void lcd_write_cmd(uint8_t cmd) {
-  TFT_CS_H(); /* CS high first - match STM32 working pattern */
   TFT_DC_L(); /* DC low = command */
   TFT_CS_L(); /* CS low = chip select active */
   spi_write_data8(cmd);
-  TFT_CS_H(); /* CS high = deselect */
+  TFT_CS_H(); /* CS high first - match STM32 working pattern */
+
+  // TFT_CS_L(); /* CS high = deselect */
 }
 
 static void spi_write_data8(uint8_t data) {
@@ -106,80 +107,102 @@ static void lcd_write_data16(uint16_t data) {
  * without incrementing the source address. One DMA transfer fills the
  * entire rectangle at hardware speed with SPI flow control.
  * ======================================================================== */
+#define USE_DMA1
+
 #ifdef USE_DMA
 
 #define LCD_DMA_UNIT CM_DMA1
-#define LCD_DMA_CH DMA_CH2
-#define LCD_DMA_TRIG AOS_DMA1_2
-#define LCD_DMA_FLAG_TC DMA_FLAG_TC_CH2
-
-#if defined(__ICCARM__)
-#pragma data_alignment = 4
-static uint16_t s_dma_color_buf[2];
-#elif defined(__CC_ARM)
-__align(4) static uint16_t s_dma_color_buf[2];
-#else
-static uint16_t s_dma_color_buf[2] __attribute__((aligned(4)));
-#endif
+#define LCD_DMA_CH DMA_CH0
+#define LCD_DMA_TRIG AOS_DMA1_0
+static volatile uint8_t s_dma_color_data[2]; // 恢复为 8位数组
 
 static void lcd_dma_init(void) {
   stc_dma_init_t stcDma;
   FCG_Fcg0PeriphClockCmd(FCG0_PERIPH_DMA1 | FCG0_PERIPH_AOS, ENABLE);
 
   DMA_StructInit(&stcDma);
-  stcDma.u32DataWidth = DMA_DATAWIDTH_16BIT;
-  stcDma.u32BlockSize = 1U;
+  stcDma.u32DataWidth = DMA_DATAWIDTH_8BIT; // 1. 严格使用 8位 传输
+  stcDma.u32BlockSize = 2U;                 // 2. 每个 Block 传输 2 字节（高8位 + 低8位）
   stcDma.u32TransCount = 1U;
-  stcDma.u32SrcAddr = (uint32_t)&s_dma_color_buf[0];
-  stcDma.u32DestAddr = (uint32_t)(&(CM_SPI3->DR)); // 指向正确的SPI数据寄存器基地址
-  stcDma.u32SrcAddrInc = DMA_SRC_ADDR_FIX;         // 固定源地�
-  stcDma.u32DestAddrInc = DMA_DEST_ADDR_FIX;       // 固定
+  stcDma.u32SrcAddr = (uint32_t)s_dma_color_data;
+  stcDma.u32DestAddr = (uint32_t)(&(CM_SPI3->DR)); // 目标仍为 SPI3 数据寄存器
+
+  // 3. 配置地址模式：源地址在 Block 内递增，目标地址固定
+  stcDma.u32SrcAddrInc = DMA_SRC_ADDR_FIX;
+  stcDma.u32DestAddrInc = DMA_DEST_ADDR_FIX;
 
   (void)DMA_Init(LCD_DMA_UNIT, LCD_DMA_CH, &stcDma);
 
+  //  stc_dma_repeat_init_t stcDmaRepeat;
+  //  DMA_RepeatStructInit(&stcDmaRepeat);
+  //  stcDmaRepeat.u32Mode = DMA_CHCTL_SRPTEN; // 仅开启源地址（Src）重复模式
+  //  stcDmaRepeat.u32SrcCount = 2U;           // 源地址重复区域大小为 2 字节
+  //  stcDmaRepeat.u32DestCount = 0U;          // 目的地址不重复
+
+  //  DMA_RepeatInit(LCD_DMA_UNIT, LCD_DMA_CH, &stcDmaRepeat);
+
+  // 绑定到 SPI3 的发送空触发源
   AOS_SetTriggerEventSrc(LCD_DMA_TRIG, EVT_SRC_SPI3_SPTI);
 
   DMA_Cmd(LCD_DMA_UNIT, ENABLE);
 }
 
-/** * @brief DMA 刷屏/充优化函
- * @param color: RGB565 颜色
- * @param count: 像素总数
- */
-static void lcd_dma_fill(uint16_t color, uint32_t count) {
-  if (count == 0)
+static void lcd_dma_fill(uint16_t color, uint32_t total) {
+  if (total == 0)
     return;
 
-  s_dma_color_buf[0] = color;
+  // 准备 8位 颜色数据（ST7789 要求高字节先发）
+  s_dma_color_data[0] = (uint8_t)(color >> 8);
+  s_dma_color_data[1] = (uint8_t)(color & 0xFF);
 
-  uint32_t remain = count;
+  const uint32_t MAX_DMA_COUNT = 65535U; // 最大可传 65535 个像素(Block)
+  uint32_t remaining = total;
+  uint32_t current_count;
 
-  while (remain > 0) {
-    uint16_t transfer_size = (remain > 60000U) ? 60000U : (uint16_t)remain;
-    remain -= transfer_size;
+  while (remaining > 0) {
+    if (remaining > MAX_DMA_COUNT) {
+      current_count = MAX_DMA_COUNT;
+    } else {
+      current_count = remaining;
+    }
 
-    DMA_ClearTransCompleteStatus(LCD_DMA_UNIT, LCD_DMA_FLAG_TC);
+    // 1. 清除上一次的完成标志
+    DMA_ClearTransCompleteStatus(LCD_DMA_UNIT, LCD_DMA_CH);
 
-    // 华大推荐的动态安全重载寄存器方法
-    DMA_SetSrcAddr(LCD_DMA_UNIT, LCD_DMA_CH, (uint32_t)&s_dma_color_buf[0]);
-    DMA_SetBlockSize(LCD_DMA_UNIT, LCD_DMA_CH, 1U);
-    DMA_SetTransCount(LCD_DMA_UNIT, LCD_DMA_CH, transfer_size);
+    // 2. 设置本次传输的像素个数（即数据块 Block 的个数）
+    DMA_SetTransCount(LCD_DMA_UNIT, LCD_DMA_CH, current_count);
 
+    // 3. 显式重置一次源地址指针，确保万无一失
+    DMA_SetBlockSize(LCD_DMA_UNIT, LCD_DMA_CH, 2);
+    DMA_SetSrcAddr(LCD_DMA_UNIT, LCD_DMA_CH, (uint32_t)s_dma_color_data);
+
+    // 4. 启动 DMA 传输
     DMA_ChCmd(LCD_DMA_UNIT, LCD_DMA_CH, ENABLE);
 
-    while (DMA_GetTransCompleteStatus(LCD_DMA_UNIT, LCD_DMA_FLAG_TC) == RESET)
-      ;
+    // 5. 等待 DMA 本次所有数据块搬运完毕
+    uint32_t timeout = 0xFFFFFF;
+    while ((DMA_GetTransCompleteStatus(LCD_DMA_UNIT, LCD_DMA_CH) == RESET) && (timeout > 0)) {
+      timeout--;
+    }
 
-    // 关闭通道以准备
+    // 6. 等待 SPI 当前 FIFO 和移位寄存器中的数据彻底在物理层发完
+    timeout = 0xFFFF;
+    while ((SPI_GetStatus(TFT_SPI_UNIT, SPI_FLAG_TX_BUF_EMPTY) == RESET) && (timeout > 0)) {
+      timeout--;
+    }
+
+    // 7. 关闭通道，清理状态，准备下一轮
     DMA_ChCmd(LCD_DMA_UNIT, LCD_DMA_CH, DISABLE);
+    DMA_ClearTransCompleteStatus(LCD_DMA_UNIT, LCD_DMA_CH);
+
+    remaining -= current_count;
   }
 
-  DMA_ClearTransCompleteStatus(LCD_DMA_UNIT, LCD_DMA_FLAG_TC);
-  while (SPI_GetStatus(TFT_SPI_UNIT, SPI_FLAG_TX_BUF_EMPTY) == RESET)
-    ;
+  // 8. 整个矩形刷完，等待 SPI 彻底空闲
   while (SPI_GetStatus(TFT_SPI_UNIT, SPI_FLAG_IDLE) == RESET)
     ;
 }
+
 #endif
 
 /* ========================================================================
@@ -195,11 +218,6 @@ static void lcd_dma_fill(uint16_t color, uint32_t count) {
 void lcd_init(void) {
   /* --- Clock gate for SPI3 --- */
   FCG_Fcg1PeriphClockCmd(FCG1_PERIPH_SPI3, ENABLE);
-
-  /* --- 0. Release JTAG debug pins for GPIO use --- */
-  /* PB3 = JTAG_TDO, PA15 = JTAG_TDI. Keep SWCLK/SWDIO for debugging. */
-  // GPIO_SetDebugPort(GPIO_PIN_TDO, DISABLE);  /* Release PB3 from JTAG TDO */
-  // GPIO_SetDebugPort(GPIO_PIN_TDI, DISABLE);  /* Release PA15 from JTAG TDI */
 
   GPIO_SetDebugPort(GPIO_PIN_TDO, DISABLE);
   GPIO_SetDebugPort(GPIO_PIN_TDI, DISABLE);
@@ -242,19 +260,20 @@ void lcd_init(void) {
 
   SPI_Init(TFT_SPI_UNIT, &stcSpiInit);
 
-  /* Enable SPI3 */
-  SPI_Cmd(TFT_SPI_UNIT, ENABLE);
-
 #ifdef USE_DMA
   lcd_dma_init();
 #endif
+
+  SPI_Cmd(TFT_SPI_UNIT, ENABLE);
+  
   /* direct rendering */
 
   /* --- 4. ST7789 init sequence (matching STM32 working driver) --- */
 
   /* 4a. Hardware + Software reset */
+  TFT_CS_H();
   TFT_RST_L();
-  DDL_DelayMS(50);
+  DDL_DelayMS(1);
   TFT_RST_H();
   lcd_write_cmd(ST7789_SWRESET);
   DDL_DelayMS(150); /* 150ms - matching STM32 */
